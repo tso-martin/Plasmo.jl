@@ -223,6 +223,13 @@ function add_node!(graph::OptiGraph, optinode::OptiNode)
     return optinode
 end
 
+function add_node!(graph::OptiGraph, m::JuMP.Model, label::String)
+    optinode = add_node!(graph)
+    set_model(optinode, m)
+    optinode.label = label
+    return optinode
+end
+
 """
     optinodes(graph::OptiGraph)::Vector{OptiNode}
 

@@ -264,6 +264,10 @@ function JuMP.optimize!(graph::OptiGraph)
         MOI.set(graph_backend, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
 
+    if haskey(graph.ext,:callback_function)
+        set_attribute(graph, MOI.LazyConstraintCallback(), graph.ext[:callback_function])
+    end
+
     try
         MOI.optimize!(graph_backend)
     catch err
@@ -372,6 +376,65 @@ function JuMP.relax_integrality(graph::OptiGraph)
         JuMP.relax_integrality(jump_model(node))
     end
 end
+
+function JuMP.mode(graph::OptiGraph)
+    modes = unique([JuMP.mode(jump_model(node)) for node in all_nodes(graph)])
+    @assert length(modes) == 1 "Mixed JuMP modes in OptiGraph"
+    return modes[1]
+end
+
+function JuMP.solver_name(graph::OptiGraph)
+    solver_name = unique([JuMP.solver_name(jump_model(node)) for node in all_nodes(graph)])
+    @assert length(solver_name) == 1 "Mixed JuMP solver_names in OptiGraph"
+    return solver_name[1]
+end
+
+# function JuMP.termination_status(graph::OptiGraph)
+#     termination_status = unique([JuMP.termination_status(jump_model(node)) for node in all_nodes(graph)])
+#     @assert length(termination_status) == 1 "Mixed JuMP termination_status in OptiGraph"
+#     return termination_status[1]
+# end
+
+function JuMP.primal_status(graph::OptiGraph)
+    primal_status = unique([JuMP.primal_status(jump_model(node)) for node in all_nodes(graph)])
+    @assert length(primal_status) == 1 "Mixed JuMP primal_status in OptiGraph"
+    return primal_status[1]
+end
+
+function JuMP.dual_status(graph::OptiGraph)
+    dual_status = unique([JuMP.dual_status(jump_model(node)) for node in all_nodes(graph)])
+    @assert length(dual_status) == 1 "Mixed JuMP dual_status in OptiGraph"
+    return dual_status[1]
+end
+
+function JuMP.set_attribute(
+    graph::OptiGraph,
+    attr::MOI.AbstractModelAttribute,
+    value,)
+    MOI.set(graph, attr, value)
+    return
+end
+
+function JuMP.callback_value(cb_data, x::GenericVariableRef, graph::OptiGraph)
+    return MOI.get(
+        backend(graph).optimizer,
+        MOI.CallbackVariablePrimal(cb_data),
+        index(x),
+    )
+end
+
+function JuMP.callback_node_status(cb_data, graph::OptiGraph)
+    return MOI.get(backend(graph).optimizer, MOI.CallbackNodeStatus(cb_data))
+end
+
+function MOI.submit(
+    graph::OptiGraph,
+    cb::MOI.LazyConstraint,
+    con::ScalarConstraint,
+)
+    return MOI.submit(backend(graph).optimizer, cb, moi_function(con.func), con.set)
+end
+
 
 function set_node_primals(
     node::OptiNode, vars::Vector{JuMP.VariableRef}, values::Vector{Float64}
