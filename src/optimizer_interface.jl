@@ -416,10 +416,11 @@ function JuMP.set_attribute(
 end
 
 function JuMP.callback_value(cb_data, x::GenericVariableRef, graph::OptiGraph)
+    var_index = backend(graph).model_to_optimizer_map.var_map[x]
     return MOI.get(
         backend(graph).optimizer,
         MOI.CallbackVariablePrimal(cb_data),
-        index(x),
+        var_index,
     )
 end
 
@@ -427,12 +428,25 @@ function JuMP.callback_node_status(cb_data, graph::OptiGraph)
     return MOI.get(backend(graph).optimizer, MOI.CallbackNodeStatus(cb_data))
 end
 
-function MOI.submit(
-    graph::OptiGraph,
-    cb::MOI.LazyConstraint,
-    con::ScalarConstraint,
-)
-    return MOI.submit(backend(graph).optimizer, cb, moi_function(con.func), con.set)
+function MOI.submit(graph::OptiGraph,cb::MOI.LazyConstraint,con::AbstractConstraint)
+    id = graph.id
+    jump_func = JuMP.jump_function(con)
+    moi_func = JuMP.moi_function(con)
+
+    for (i, term) in enumerate(JuMP.linear_terms(jump_func))
+        coeff = term[1]
+        var = term[2]
+
+        src = JuMP.backend(optinode(var))
+        idx_map = src.optimizers[id].node_to_optimizer_map
+
+        var_idx = JuMP.index(var)
+        dest_idx = idx_map[var_idx]
+
+        moi_func.terms[i] = MOI.ScalarAffineTerm{Float64}(coeff, dest_idx)
+    end
+
+    return MOI.submit(backend(graph).optimizer, cb, moi_func, JuMP.moi_set(con))
 end
 
 
