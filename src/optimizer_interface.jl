@@ -267,6 +267,9 @@ function JuMP.optimize!(graph::OptiGraph)
     if haskey(graph.ext,:callback_function)
         set_attribute(graph, MOI.LazyConstraintCallback(), graph.ext[:callback_function])
     end
+    if haskey(graph.ext,:ipopt_callback)
+        set_attribute(graph, graph.ext[:ipopt_callback].attribute_type, graph.ext[:ipopt_callback].attribute_value)
+    end
 
     try
         MOI.optimize!(graph_backend)
