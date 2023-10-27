@@ -175,6 +175,10 @@ function MOIU.attach_optimizer(graph::OptiGraph)
     return MOIU.attach_optimizer(backend(graph))
 end
 
+function MOIU.reset_optimizer(graph::OptiGraph)
+    return MOIU.reset_optimizer(backend(graph))
+end
+
 #################################
 # Optimizer
 #################################
@@ -358,6 +362,14 @@ function MOI.set(graph::OptiGraph, attr::MOI.AbstractModelAttribute, value)
     return MOI.set(backend(graph), attr, value)
 end
 
+function MOI.submit(
+    graph::OptiGraph,
+    cb::MOI.LazyConstraint,
+    con::ScalarConstraint,
+)
+    return MOI.submit(graph.moi_backend.optimizer, cb, moi_function(con.func), con.set)
+end
+
 #######################################################
 #Optinode optimizer interface
 #######################################################
@@ -369,6 +381,9 @@ function JuMP.set_optimizer(node::OptiNode, optimizer_constructor)
     return nothing
 end
 
+# NOTE: this resets NLP data on every NodePointer, so graph solutions get cleared
+# This is currently a known limitation in Plasmo.jl. If you solve a node after a graph,
+# it will remove the graph solution.
 function JuMP.optimize!(node::OptiNode; kwargs...)
     JuMP.optimize!(jump_model(node); kwargs...)
     return nothing

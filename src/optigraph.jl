@@ -510,7 +510,8 @@ the optinode variable value obtained by solving `graph` which contains said opti
 function JuMP.value(graph::OptiGraph, var::JuMP.VariableRef)
     node_pointer = JuMP.backend(var.model).result_location[graph.id]
     var_idx = node_pointer.node_to_optimizer_map[index(var)]
-    return MOI.get(backend(graph).optimizer, MOI.VariablePrimal(), var_idx)
+    # return MOI.get(backend(graph).optimizer, MOI.VariablePrimal(), var_idx)
+    return MOI.get(node_pointer, MOI.VariablePrimal(), var_idx)
 end
 
 """
@@ -648,17 +649,17 @@ end
 
 function JuMP.set_objective_function(graph::OptiGraph, expr::JuMP.GenericAffExpr)
     graph.objective_function = expr
-    return
+    return nothing
 end
 
 function JuMP.set_objective_function(graph::OptiGraph, expr::JuMP.GenericQuadExpr)
     graph.objective_function = expr
-    return
+    return nothing
 end
 
 function set_node_objective_functions(graph::OptiGraph)
     _set_node_objective_functions(graph, objective_function(graph))
-    return
+    return nothing
 end
 
 function _set_node_objective_functions(graph::OptiGraph, expr::JuMP.GenericAffExpr)
@@ -673,7 +674,7 @@ function _set_node_objective_functions(graph::OptiGraph, expr::JuMP.GenericAffEx
     for node in all_nodes(graph)
         JuMP.set_objective_function(node, node_expressions[node])
     end
-    return
+    return nothing
 end
 
 function _set_node_objective_functions(graph::OptiGraph, expr::JuMP.GenericQuadExpr)
@@ -693,7 +694,7 @@ function _set_node_objective_functions(graph::OptiGraph, expr::JuMP.GenericQuadE
     for node in all_nodes(graph)
         JuMP.set_objective_function(node, node_expressions[node])
     end
-    return
+    return nothing
 end
 
 """
@@ -896,8 +897,9 @@ Retrieve the dual value of `linkref` on optigraph `graph`.
 """
 function JuMP.dual(graph::OptiGraph, linkref::LinkConstraintRef)
     optiedge = JuMP.owner_model(linkref)
-    id = graph.id
-    return MOI.get(optiedge.backend, MOI.ConstraintDual(), linkref)
+    edge_pointer = optiedge.backend.optimizers[graph.id]
+    dual_value = MOI.get(edge_pointer, MOI.ConstraintDual(), linkref)
+    return dual_value
 end
 
 # set start value for a graph backend
@@ -932,6 +934,19 @@ function JuMP.start_value(graph::OptiGraph, variable::JuMP.VariableRef)
     return MOI.get(backend(graph), MOI.VariablePrimalStart(), var_idx)
 end
 
+function JuMP.set_attribute(
+    graph::OptiGraph,
+    attr::MOI.AbstractModelAttribute,
+    value
+)
+    MOI.set(graph, attr, value)
+    return
+end
+
+function JuMP.solver_name(graph::OptiGraph)
+    return MOI.get(graph.moi_backend, MOI.SolverName())
+end
+
 """
     JuMP.termination_status(graph::OptiGraph)
 
@@ -939,6 +954,26 @@ Retrieve the current termination status of optigraph `graph`.
 """
 function JuMP.termination_status(graph::OptiGraph)
     return MOI.get(graph.moi_backend, MOI.TerminationStatus())
+end
+
+function JuMP.primal_status(graph::OptiGraph)
+    return MOI.get(graph.moi_backend, MOI.PrimalStatus())
+end
+
+function JuMP.dual_status(graph::OptiGraph)
+    return MOI.get(graph.moi_backend, MOI.DualStatus())
+end
+
+function JuMP.callback_value(cb_data, x::GenericVariableRef, graph::OptiGraph)
+    return MOI.get(
+        graph.moi_backend.optimizer,
+        MOI.CallbackVariablePrimal(cb_data),
+        index(x),
+    )
+end
+
+function JuMP.callback_node_status(cb_data, graph::OptiGraph)
+    return MOI.get(graph.moi_backend.optimizer, MOI.CallbackNodeStatus(cb_data))
 end
 
 ####################################

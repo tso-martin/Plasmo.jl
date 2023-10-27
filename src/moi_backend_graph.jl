@@ -103,15 +103,18 @@ function MOI.set(graph_backend::GraphBackend, attr::MOI.AbstractOptimizerAttribu
     return nothing
 end
 
-# TODO: properly support variable and constraint attributes
 function MOI.get(
     graph_backend::GraphBackend, attr::MOI.VariablePrimalStart, idx::MOI.VariableIndex
 )
     return MOI.get(graph_backend.model_cache, attr, idx)
 end
 
+#TODO: properly support variable and constraint attributes
 #MOI.set(graph_backend::GraphBackend,attr::MOI.AnyAttribute,args...) = MOI.set(graph_backend.optimizer,attr,args...)
+
 MOIU.state(graph_backend::GraphBackend) = graph_backend.state
+
+# TODO: decide whether we support graph modes
 #MOIU.mode(graph_backend::GraphBackend) = graph_backend.mode
 
 """
@@ -271,5 +274,18 @@ function MOI.optimize!(graph_backend::GraphBackend)
         @assert MOIU.state(graph_backend) == MOIU.ATTACHED_OPTIMIZER
     end
     MOI.optimize!(graph_backend.optimizer)
+    return nothing
+end
+
+function MOIU.reset_optimizer(graph_backend::GraphBackend)
+    MOI.empty!(graph_backend.optimizer)
+    # delete graph backend from all nodes
+    graph = graph_backend.optigraph
+    for node in all_nodes(graph_backend.optigraph)
+        nb = JuMP.backend(node)
+        filter!(x -> x != graph.id, nb.graph_ids)
+        delete!(nb.optimizers, graph.id)
+    end
+    graph_backend.state = MOIU.EMPTY_OPTIMIZER
     return nothing
 end
