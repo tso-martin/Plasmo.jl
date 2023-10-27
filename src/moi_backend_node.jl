@@ -410,18 +410,20 @@ function _swap_indices(func::MOI.ScalarAffineFunction, idxmap::MOIU.IndexMap)
 end
 
 #TODO: Quadratic swap
-# function _swap_indices(obj::MOI.ScalarQuadraticFunction,idxmap::MOIU.IndexMap)
-#     quad_terms = obj.quadratic_terms
-#     for i = 1:length(quad_terms)
-#         coeff = quad_terms[i].coefficient
-#         var_idx1 = quad_terms[i].variable_index_1
-#         var_idx2 = quad_terms[i].variable_index_2
-#         quad_terms[i] = MOI.ScalarQuadraticTerm{Float64}(coeff,idxmap[var_idx1],idxmap[var_idx2])
-#     end
-#     aff_terms = obj.affine_terms
-#     for i = 1:length(aff_terms)
-#         coeff = aff_terms[i].coefficient
-#         var_idx = aff_terms[i].variable_index
-#         terms[i] = MOI.ScalarAffineTerm{Float64}(coeff,idxmap[var_idx])
-#     end
-# end
+ function _swap_indices(func::MOI.ScalarQuadraticFunction,idxmap::MOIU.IndexMap)
+    new_func = copy(func)
+    quad_terms = new_func.quadratic_terms
+    for i = 1:length(quad_terms)
+        coeff = quad_terms[i].coefficient
+        var_idx1 = quad_terms[i].variable_1
+        var_idx2 = quad_terms[i].variable_2
+        quad_terms[i] = MOI.ScalarQuadraticTerm{Float64}(coeff,idxmap[var_idx1],idxmap[var_idx2])
+    end
+    aff_terms = new_func.affine_terms
+    for i = 1:length(aff_terms)
+        coeff = aff_terms[i].coefficient
+        var_idx = aff_terms[i].variable
+        terms[i] = MOI.ScalarAffineTerm{Float64}(coeff,idxmap[var_idx])
+    end
+    return new_func
+end
