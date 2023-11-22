@@ -401,11 +401,11 @@ function JuMP.mode(graph::OptiGraph)
     return modes[1]
 end
 
-function JuMP.solver_name(graph::OptiGraph)
-    solver_name = unique([JuMP.solver_name(jump_model(node)) for node in all_nodes(graph)])
-    @assert length(solver_name) == 1 "Mixed JuMP solver_names in OptiGraph"
-    return solver_name[1]
-end
+# function JuMP.solver_name(graph::OptiGraph)
+#     solver_name = unique([JuMP.solver_name(jump_model(node)) for node in all_nodes(graph)])
+#     @assert length(solver_name) == 1 "Mixed JuMP solver_names in OptiGraph"
+#     return solver_name[1]
+# end
 
 # function JuMP.termination_status(graph::OptiGraph)
 #     termination_status = unique([JuMP.termination_status(jump_model(node)) for node in all_nodes(graph)])
@@ -413,38 +413,38 @@ end
 #     return termination_status[1]
 # end
 
-function JuMP.primal_status(graph::OptiGraph)
-    primal_status = unique([JuMP.primal_status(jump_model(node)) for node in all_nodes(graph)])
-    @assert length(primal_status) == 1 "Mixed JuMP primal_status in OptiGraph"
-    return primal_status[1]
-end
+# function JuMP.primal_status(graph::OptiGraph)
+#     primal_status = unique([JuMP.primal_status(jump_model(node)) for node in all_nodes(graph)])
+#     @assert length(primal_status) == 1 "Mixed JuMP primal_status in OptiGraph"
+#     return primal_status[1]
+# end
 
-function JuMP.dual_status(graph::OptiGraph)
-    dual_status = unique([JuMP.dual_status(jump_model(node)) for node in all_nodes(graph)])
-    @assert length(dual_status) == 1 "Mixed JuMP dual_status in OptiGraph"
-    return dual_status[1]
-end
+# function JuMP.dual_status(graph::OptiGraph)
+#     dual_status = unique([JuMP.dual_status(jump_model(node)) for node in all_nodes(graph)])
+#     @assert length(dual_status) == 1 "Mixed JuMP dual_status in OptiGraph"
+#     return dual_status[1]
+# end
 
-function JuMP.set_attribute(
-    graph::OptiGraph,
-    attr::MOI.AbstractModelAttribute,
-    value,)
-    MOI.set(graph, attr, value)
-    return
-end
+# function JuMP.set_attribute(
+#     graph::OptiGraph,
+#     attr::MOI.AbstractModelAttribute,
+#     value,)
+#     MOI.set(graph, attr, value)
+#     return
+# end
 
-function JuMP.callback_value(cb_data, x::GenericVariableRef, graph::OptiGraph)
-    var_index = backend(graph).model_to_optimizer_map.var_map[x]
-    return MOI.get(
-        backend(graph).optimizer,
-        MOI.CallbackVariablePrimal(cb_data),
-        var_index,
-    )
-end
+# function JuMP.callback_value(cb_data, x::GenericVariableRef, graph::OptiGraph)
+#     var_index = backend(graph).model_to_optimizer_map.var_map[x]
+#     return MOI.get(
+#         backend(graph).optimizer,
+#         MOI.CallbackVariablePrimal(cb_data),
+#         var_index,
+#     )
+# end
 
-function JuMP.callback_node_status(cb_data, graph::OptiGraph)
-    return MOI.get(backend(graph).optimizer, MOI.CallbackNodeStatus(cb_data))
-end
+# function JuMP.callback_node_status(cb_data, graph::OptiGraph)
+#     return MOI.get(backend(graph).optimizer, MOI.CallbackNodeStatus(cb_data))
+# end
 
 function MOI.submit(graph::OptiGraph,cb::MOI.LazyConstraint,con::AbstractConstraint)
     id = graph.id
