@@ -965,10 +965,11 @@ function JuMP.dual_status(graph::OptiGraph)
 end
 
 function JuMP.callback_value(cb_data, x::GenericVariableRef, graph::OptiGraph)
+    var_index = graph.moi_backend.model_to_optimizer_map.var_map[x]
     return MOI.get(
         graph.moi_backend.optimizer,
         MOI.CallbackVariablePrimal(cb_data),
-        index(x),
+        var_index,
     )
 end
 
