@@ -490,3 +490,53 @@ function set_node_status(node::OptiNode, status::MOI.TerminationStatusCode)
     set_backend_status!(node_backend, status, node.id)
     return node.model.is_model_dirty = false
 end
+
+"""
+    get_backend_optimizer!(graph::OptiGraph)
+
+Aggregate the graph nodes and build the full model passed to the optimizer. Taken from function JuMP.optimize!(graph::OptiGraph)
+"""
+function get_backend_optimizer!(graph::OptiGraph)
+    graph_backend = JuMP.backend(graph)
+    if MOIU.state(graph_backend) == MOIU.NO_OPTIMIZER
+        error(
+            "Please set an optimizer on the optigraph before calling `optimize!` by using `set_optimizer(graph,optimizer)`",
+        )
+    end
+
+    if graph_backend.state == MOIU.EMPTY_OPTIMIZER
+        MOIU.attach_optimizer(graph_backend)
+        graph.is_dirty = false
+    elseif graph.is_dirty == true
+        MOI.empty!(graph_backend.optimizer)
+        # MOI.empty!(graph_backend.model_cache)
+        graph_backend.state = MOIU.EMPTY_OPTIMIZER
+        MOIU.attach_optimizer(graph_backend)
+        graph.is_dirty = false
+    end
+
+    # Just like JuMP, NLP data is not kept in sync, so set it up here
+    if Plasmo.has_nlp_data(graph)
+        # NOTE: this also adds the NLPBlock to the graph backend model_cache, not sure we need it there
+        MOI.set(graph_backend, MOI.NLPBlock(), _create_nlp_block_data(graph))
+    end
+
+    # set objective function
+    has_nl_obj = Plasmo.has_nl_objective(graph)
+    if !(has_nl_obj)
+        # TODO: handle graph objective using GraphBackend instead of setting here
+        Plasmo._set_graph_objective(graph)
+        Plasmo._set_backend_objective(graph) #sets linear or quadratic objective
+    else
+        #set default sense to minimize if there is a nonlinear objective function
+        MOI.set(graph_backend, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    end
+
+    if haskey(graph.ext,:callback_function)
+        set_attribute(graph, MOI.LazyConstraintCallback(), graph.ext[:callback_function])
+    end
+    if haskey(graph.ext,:ipopt_callback)
+        set_attribute(graph, graph.ext[:ipopt_callback].attribute_type, graph.ext[:ipopt_callback].attribute_value)
+    end
+    return graph_backend.optimizer
+end
