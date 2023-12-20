@@ -181,6 +181,12 @@ function MOI.supports(
     return MOI.supports(node_backend.optimizer, attr, idx)
 end
 
+function MOI.supports(
+    node_backend::NodeBackend, attr::MOI.AbstractConstraintAttribute, ::Type{MOI.ConstraintIndex{F,S}})::Bool where {F,S}
+    return true
+end
+
+
 function MOIU.attach_optimizer(node_backend::NodeBackend)
     return MOIU.attach_optimizer(node_backend.optimizer)
 end
